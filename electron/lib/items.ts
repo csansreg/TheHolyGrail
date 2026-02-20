@@ -493,6 +493,57 @@ class ItemsStore {
 
   parseSave = async (saveName: string, content: Buffer, extension: string): Promise<d2s.types.IItem[]> => {
     const items: d2s.types.IItem[] = [];
+    const readUInt32LE = (buffer: Buffer, offset: number): number => {
+      if (offset + 4 > buffer.length) {
+        return 0;
+      }
+      return (
+        buffer[offset] |
+        (buffer[offset + 1] << 8) |
+        (buffer[offset + 2] << 16) |
+        ((buffer[offset + 3] << 24) >>> 0)
+      ) >>> 0;
+    };
+
+    const isModern105D2I = (buffer: Buffer): boolean => {
+      if (buffer.length < 64) {
+        return false;
+      }
+
+      // Modern shared stash starts with 0xAA55AA55 and stores version at +8.
+      if (readUInt32LE(buffer, 0) !== 0xaa55aa55 || readUInt32LE(buffer, 8) !== 105) {
+        return false;
+      }
+
+      // Modern format uses sector-sized blocks, first sector size at +16.
+      const firstSectionSize = readUInt32LE(buffer, 16);
+      return firstSectionSize > 0 && firstSectionSize <= buffer.length;
+    };
+
+    const extractFirstFiveModernJMSections = (buffer: Buffer): Buffer => {
+      const sections: Buffer[] = [];
+      let offset = 0;
+
+      while (offset + 68 <= buffer.length && sections.length < 5) {
+        if (readUInt32LE(buffer, offset) !== 0xaa55aa55) {
+          break;
+        }
+
+        const size = readUInt32LE(buffer, offset + 16);
+        if (!size || offset + size > buffer.length) {
+          break;
+        }
+
+        // Item sections start with "JM" at +64 in each sector.
+        if (buffer[offset + 64] === 0x4a && buffer[offset + 65] === 0x4d) {
+          sections.push(buffer.slice(offset, offset + size));
+        }
+
+        offset += size;
+      }
+
+      return sections.length > 0 ? Buffer.concat(sections) : buffer;
+    };
 
     const parseItems = (itemList: d2s.types.IItem[], isEmbed: boolean = false) => {
       itemList.forEach((item) => {
@@ -563,9 +614,11 @@ class ItemsStore {
           parseStash(response);
         });
         break;
-      case '.d2i':
-        await d2stash.read(content).then(parseStash);
+      case '.d2i': {
+        const stashContent = isModern105D2I(content) ? extractFirstFiveModernJMSections(content) : content;
+        await d2stash.read(stashContent).then(parseStash);
         break;
+      }
       default:
         await d2s.read(content).then(parseD2S);
     }

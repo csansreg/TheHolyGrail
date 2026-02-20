@@ -5,12 +5,78 @@ import Accordion from '@mui/material/Accordion';
 import AccordionSummary from '@mui/material/AccordionSummary';
 import AccordionDetails from '@mui/material/AccordionDetails';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import Box from '@mui/material/Box';
 
 import { StatisticsLine } from './line';
 import { Win } from './win';
 import { getHolyGrailSeedData } from '../../../electron/lib/holyGrailSeedData';
 import { useTranslation } from 'react-i18next';
 import Circle from './circle';
+import { simplifyItemName } from '../../utils/objects';
+import { silospenMapping } from '../../../electron/lib/silospenMapping';
+
+type RecentFind = {
+  name: string,
+  type: string,
+  timestamp: number,
+  ethereal?: boolean,
+  isEthereal?: boolean,
+  eth?: boolean,
+  flags?: { ethereal?: boolean },
+}
+
+const resolveFixedName = (name: string): string => {
+  try {
+    const key = simplifyItemName(name);
+    const fixed = (silospenMapping as Record<string, string>)[key];
+    return fixed || name;
+  } catch {
+    return name;
+  }
+};
+
+const formatItemName = (name: string): string => {
+  return name
+    .replace(/'{2,}/g, "'")
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/([0-9])([A-Z])/g, '$1 $2')
+    .replace(/([a-zA-Z])([0-9])/g, '$1 $2')
+    .replace(/\s+/g, ' ')
+    .replace(/\bOf\b/g, 'of')
+    .replace(/\bThe\b/g, 'the')
+    .replace(/\bAnd\b/g, 'and')
+    .replace(/\bFor\b/g, 'for')
+    .replace(/\bIn\b/g, 'in')
+    .replace(/\bOn\b/g, 'on')
+    .replace(/\bWith\b/g, 'with')
+    .replace(/\bs\s(?!')/g, "'s ")
+    .replace(/\bS\s([A-Z])(?!')/g, "'s $1")
+    .replace(/'{2,}/g, "'")
+    .replace(/^[a-z]/, match => match.toUpperCase())
+    .replace(/([.!?]\s+)([a-z])/g, (match, punct, letter) => punct + letter.toUpperCase())
+    .trim();
+};
+
+const formatTimeAgo = (timestamp: number): string => {
+  const now = Date.now();
+  const diff = now - timestamp;
+  const hours = Math.floor(diff / 3600000);
+  const minutes = Math.floor(diff / 60000);
+  const seconds = Math.floor(diff / 1000);
+
+  if (hours > 0) return `${hours}h ago`;
+  if (minutes > 0) return `${minutes}m ago`;
+  if (seconds > 5) return `${seconds}s ago`;
+  return 'Just now';
+};
+
+const isItemEthereal = (item: RecentFind): boolean => {
+  if (typeof item.eth === 'boolean') return item.eth;
+  if (typeof item.ethereal === 'boolean') return item.ethereal;
+  if (typeof item.isEthereal === 'boolean') return item.isEthereal;
+  if (item.flags && typeof item.flags.ethereal === 'boolean') return item.flags.ethereal;
+  return false;
+};
 
 type StatsProps = {
   appSettings: Settings,
@@ -24,6 +90,8 @@ export function Statistics({ stats, noAnimation, appSettings, holyGrailStats, on
   const holyGrailSeedData = getHolyGrailSeedData(appSettings, false)
   const ethGrailSeedData = getHolyGrailSeedData(appSettings, true)
   const { t } = useTranslation();
+  const recentFinds: RecentFind[] = ((window as any)?.Main?.getRecentFinds?.() || []) as RecentFind[];
+  const visibleRecentFinds = recentFinds.slice(0, appSettings.overlayRecentFindsCount || 5);
 
   const showNormal = appSettings.grailType !== GrailType.Ethereal;
   const showEthereal = appSettings.grailType === GrailType.Ethereal || appSettings.grailType === GrailType.Each;
@@ -153,30 +221,42 @@ export function Statistics({ stats, noAnimation, appSettings, holyGrailStats, on
         </Grid>
         {stats &&
           <>
-            <Grid container style={{ marginTop: 50, alignItems: 'center', justifyContent: 'center' }}>
-              <Grid item xs={4}>
-                <Accordion>
+            <Grid
+              container
+              style={{ marginTop: 50, alignItems: 'flex-start', justifyContent: 'center' }}
+            >
+              <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'center' }}>
+                <Box sx={{ width: '100%', maxWidth: 500 }}>
+                <Accordion sx={{ width: '100%' }}>
                   <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                    <Typography>{t("Save files summary")}</Typography>
+                    <Typography>{t("Recent finds")}</Typography>
                   </AccordionSummary>
                   <AccordionDetails>
                     <TableContainer>
-                      <Table>
+                      <Table sx={{
+                        '& .MuiTableCell-root': { py: 0.5 },
+                        '& .MuiTableHead-root .MuiTableCell-root': { py: 0.75 },
+                      }}>
                         <TableHead>
                           <TableRow>
-                            <TableCell>{t("Filename")}</TableCell>
-                            <TableCell>{t("Items read")}</TableCell>
+                            <TableCell>{t("Item")}</TableCell>
+                            <TableCell>{t("Type")}</TableCell>
+                            <TableCell>{t("Eth")}</TableCell>
+                            <TableCell>{t("When")}</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
-                          {Object.keys(stats).map(filename => (
-                            <TableRow key={filename}>
-                              <TableCell>{filename}</TableCell>
-                              <TableCell>{
-                                stats[filename] === null
-                                  ? <span style={{color: 'red'}}>{t("Error")}</span>
-                                  : stats[filename]
-                              }</TableCell>
+                          {visibleRecentFinds.length === 0 && (
+                            <TableRow>
+                              <TableCell colSpan={4}>{t("No recent finds yet")}</TableCell>
+                            </TableRow>
+                          )}
+                          {visibleRecentFinds.map((find) => (
+                            <TableRow key={`${find.name}-${find.timestamp}`}>
+                              <TableCell>{formatItemName(resolveFixedName(find.name))}</TableCell>
+                              <TableCell>{find.type || t("Item")}</TableCell>
+                              <TableCell>{isItemEthereal(find) ? 'ETH' : '-'}</TableCell>
+                              <TableCell>{formatTimeAgo(find.timestamp)}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -184,6 +264,41 @@ export function Statistics({ stats, noAnimation, appSettings, holyGrailStats, on
                     </TableContainer>
                   </AccordionDetails>
                 </Accordion>
+                <Box sx={{ mt: 1, width: '100%' }}>
+                  <Accordion sx={{ width: '100%' }}>
+                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                      <Typography>{t("Save files summary")}</Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      <TableContainer>
+                        <Table sx={{
+                          '& .MuiTableCell-root': { py: 0.5 },
+                          '& .MuiTableHead-root .MuiTableCell-root': { py: 0.75 },
+                        }}>
+                          <TableHead>
+                            <TableRow>
+                              <TableCell>{t("Filename")}</TableCell>
+                              <TableCell>{t("Items read")}</TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {Object.keys(stats).map(filename => (
+                              <TableRow key={filename}>
+                                <TableCell>{filename}</TableCell>
+                                <TableCell>{
+                                  stats[filename] === null
+                                    ? <span style={{color: 'red'}}>{t("Error")}</span>
+                                    : stats[filename]
+                                }</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </TableContainer>
+                    </AccordionDetails>
+                  </Accordion>
+                </Box>
+                </Box>
               </Grid>
             </Grid>
           </>

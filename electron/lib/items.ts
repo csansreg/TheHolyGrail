@@ -76,6 +76,21 @@ class ItemsStore {
     });
   };
 
+  seedRecentFindsForDevelopment = (count: number = 5): void => {
+    const now = Date.now();
+    const seed = [
+      { name: "Harlequin Crest" },
+      { name: "Arachnid Mesh" },
+      { name: "Tal Rasha's Guardianship" },
+      { name: "Ber", type: "Rune" },
+      { name: "runewordenigma" },
+    ];
+    this.recentFinds = seed.slice(0, Math.max(0, count));
+    storage.set('recentFinds', this.recentFinds, (error) => {
+      if (error) console.log('Error seeding recent finds:', error);
+    });
+  };
+
   getItemCategory = (itemId: string, itemName: string, isEthereal: boolean = false): string => {
     const settings = settingsStore.getSettings();
     const simplifiedId = simplifyItemName(itemId);

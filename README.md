@@ -1,4 +1,13 @@
-Original ReadMe:
+## Usage
+```bash
+yarn start # Also populates recent finds list for testing
+
+yarn package
+```
+
+---
+---
+**Original README:**
 # Holy Grail (Diablo II: Resurrected)
 
 Automatic tracker for the Diablo 2 Resurrected **Holy Grail** challenge (offline characters).  

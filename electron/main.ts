@@ -184,7 +184,7 @@ function createWindow() {
     y: mainWindowState.y,
     width: mainWindowState.width,
     height: mainWindowState.height,
-    minWidth: 1100,
+    minWidth: 700,
     minHeight: 700,
     backgroundColor: '#222222',
     autoHideMenuBar: true,
@@ -605,9 +605,13 @@ app.whenReady()
   .then(async () => {
     setupAudioProtocol();
     await registerListeners();
-    
-    // Clear recent finds on startup
-    itemsDatabase.clearRecentFinds();
+
+    // Keep production behavior (clear on launch), but seed sample entries for local dev.
+    if (app.isPackaged) {
+      itemsDatabase.clearRecentFinds();
+    } else {
+      itemsDatabase.seedRecentFindsForDevelopment(5);
+    }
     
     // Check if grail configuration should be unlocked
     webSyncManager.checkAndUnlockConfiguration();

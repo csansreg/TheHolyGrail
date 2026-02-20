@@ -10,7 +10,7 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import Switch from '@mui/material/Switch';
 import DoneIcon from '@mui/icons-material/Done';
 
-import { getHolyGrailSeedData } from '../../../electron/lib/holyGrailSeedData';
+import { getHolyGrailSeedData, runesSeed, runewordsSeed } from '../../../electron/lib/holyGrailSeedData';
 
 import dingSound from '../../../assets/ding.mp3';
 import cc from '../../../assets/cc.svg';
@@ -135,6 +135,8 @@ export function List({ fileReaderResponse, appSettings, itemNotes, playSound }: 
     () => getHolyGrailSeedData(appSettings, true),
     []
   );
+  const runesData = holyGrailSeedData.runes || runesSeed;
+  const runewordsData = holyGrailSeedData.runewords || runewordsSeed;
 
   // Feed augmented maps so totals include "previously found" when enabled
   const holyGrailStats = useMemo(
@@ -216,8 +218,8 @@ export function List({ fileReaderResponse, appSettings, itemNotes, playSound }: 
             {appSettings.grailType !== GrailType.Ethereal &&
               [
                 <Tab label={t("Sets")} key="sets" />,
-                appSettings.grailRunes && <Tab label={t("Runes")} key="runes" />,
-                appSettings.grailRunewords && <Tab label={t("Runeswords")} key="runewords" />,
+                <Tab label={t("Runes")} key="runes" />,
+                <Tab label={t("Runeswords")} key="runewords" />,
               ]
             }
           </Tabs>
@@ -313,7 +315,7 @@ export function List({ fileReaderResponse, appSettings, itemNotes, playSound }: 
             key={`runes-${historyVersion}`}
             value={search.length ? TabState.Runes : tab}
             index={TabState.Runes}
-            runes={holyGrailSeedData.runes}
+            runes={runesData}
             player={items}
             ethPlayer={{}}
             search={search}
@@ -326,8 +328,8 @@ export function List({ fileReaderResponse, appSettings, itemNotes, playSound }: 
             key={`runewords-${historyVersion}`}
             value={search.length ? TabState.Runewords : tab}
             index={TabState.Runewords}
-            runewords={holyGrailSeedData.runewords}
-            runes={holyGrailSeedData.runes}
+            runewords={runewordsData}
+            runes={runesData}
             player={items}
             ethPlayer={{}}
             search={search}

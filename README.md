@@ -1,3 +1,4 @@
+Original ReadMe:
 # Holy Grail (Diablo II: Resurrected)
 
 Automatic tracker for the Diablo 2 Resurrected **Holy Grail** challenge (offline characters).  

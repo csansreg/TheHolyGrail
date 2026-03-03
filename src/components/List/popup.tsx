@@ -1,4 +1,4 @@
-import { useState, useMemo, ReactChild } from 'react';
+import { useState, useMemo, ReactChild, MouseEvent as ReactMouseEvent } from 'react';
 import { styled } from '@mui/material/styles';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -28,6 +28,18 @@ const BootstrapDialog = styled(Dialog)(({ theme }) => ({
   '& .MuiDialogActions-root': {
     padding: theme.spacing(1),
   },
+}));
+const PopupTrigger = styled('div', {
+  shouldForwardProp: (prop) => prop !== 'loading',
+})<{ loading: boolean }>(({ loading }) => ({
+  position: 'relative',
+  ...(loading
+    ? {
+        '& [data-popup-open-details="true"]': {
+          visibility: 'hidden',
+        },
+      }
+    : {}),
 }));
 
 type PopupProps = {
@@ -123,7 +135,52 @@ export default function Popup({
     [saveFiles, ethSaveFiles]
   );
 
-  const handleClickOpen = () => {
+  const handleClose = () => {
+    setDrop(null);
+    setOpen(false);
+  };
+
+  const handleNotes = () => {
+    setNote(itemNote);
+    setNoteOpen(true);
+  };
+
+  const handleNoteChanged = () => {
+    window.Main.setItemNote(itemName, note);
+    setNoteOpen(false);
+  }
+
+  const openItemDetails = (characterName: string, details: ItemDetails[]) => {
+    if (!details || !details.length || !allInspectableItems.length) return;
+    const firstCharacterItem = details[0];
+    const firstCharacterItemIndex = allInspectableItems.findIndex((entry) =>
+      entry.characterName === characterName && entry.item === firstCharacterItem
+    );
+    setSelectedItems(allInspectableItems);
+    setSelectedItemIndex(firstCharacterItemIndex >= 0 ? firstCharacterItemIndex : 0);
+    setItemDetailsOpen(true);
+  }
+  const openOwnedItemDetails = () => {
+    const firstSaveFile = Object.keys(saveFiles || {})[0];
+    if (firstSaveFile && saveFiles[firstSaveFile]?.length) {
+      openItemDetails(firstSaveFile, saveFiles[firstSaveFile]);
+      return;
+    }
+    const firstEthSaveFile = Object.keys(ethSaveFiles || {})[0];
+    if (firstEthSaveFile && ethSaveFiles[firstEthSaveFile]?.length) {
+      openItemDetails(firstEthSaveFile, ethSaveFiles[firstEthSaveFile]);
+    }
+  };
+  const handleClickOpen = (event: ReactMouseEvent<HTMLDivElement>) => {
+    const clickTarget = event.target as HTMLElement | null;
+    const wantsDirectDetails = !!clickTarget?.closest('[data-popup-open-details="true"]');
+    if (wantsDirectDetails) {
+      event.preventDefault();
+      event.stopPropagation();
+      openOwnedItemDetails();
+      return;
+    }
+
     window.Main.on('silospenResponse', (drops: SilospenItem[]) => {
       if (!drops || !drops.sort) {
         setOpen(false);
@@ -151,32 +208,6 @@ export default function Popup({
     setOpen(true);
   };
 
-  const handleClose = () => {
-    setDrop(null);
-    setOpen(false);
-  };
-
-  const handleNotes = () => {
-    setNote(itemNote);
-    setNoteOpen(true);
-  };
-
-  const handleNoteChanged = () => {
-    window.Main.setItemNote(itemName, note);
-    setNoteOpen(false);
-  }
-
-  const openItemDetails = (characterName: string, details: ItemDetails[]) => {
-    if (!details || !details.length || !allInspectableItems.length) return;
-    const firstCharacterItem = details[0];
-    const firstCharacterItemIndex = allInspectableItems.findIndex((entry) =>
-      entry.characterName === characterName && entry.item === firstCharacterItem
-    );
-    setSelectedItems(allInspectableItems);
-    setSelectedItemIndex(firstCharacterItemIndex >= 0 ? firstCharacterItemIndex : 0);
-    setItemDetailsOpen(true);
-  }
-
   const selectedEntry = selectedItems[selectedItemIndex];
   const selectedItem = selectedEntry?.item;
   const selectedCharacterName = selectedEntry?.characterName;
@@ -190,13 +221,14 @@ export default function Popup({
       ].map(cleanPropertyLine).filter(Boolean) as string[]
     ))
     : [];
+  const isLoadingDropData = open && !drop;
 
   return (
     <>
-      <div onClick={handleClickOpen} style={{ position: 'relative' }}>
+      <PopupTrigger onClick={handleClickOpen} loading={isLoadingDropData}>
         {children}
-        {open && !drop && <div><HourglassEmptyIcon fontSize="small" style={{ position: 'absolute', top: 15, right: 20 }} /></div>}
-      </div>
+        {isLoadingDropData && <div><HourglassEmptyIcon fontSize="small" style={{ position: 'absolute', top: 15, right: 20 }} /></div>}
+      </PopupTrigger>
       <BootstrapDialog
         onClose={handleClose}
         open={open && !!drop}

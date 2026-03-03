@@ -20,7 +20,7 @@ import { runesMapping } from '../../../electron/lib/runesMapping';
 import { runewordsMapping } from '../../../electron/lib/runewordsMapping';
 import RunePopup from './runePopup';
 import ManualControl from './manualControl';
-import { Calculate, InfoOutlined } from '@mui/icons-material';
+import { Calculate, InfoOutlined, Search } from '@mui/icons-material';
 
 type TabPanelProps = {
   index: number,
@@ -202,6 +202,27 @@ export function TabPanel(props: TabPanelProps) {
     event.preventDefault();
     window.Main.saveManualEthItem(itemName, count);
   }
+  const renderItemSecondaryAction = (itemName: string) => {
+    const isOwned = !!player[itemName] || !!ethPlayer[itemName];
+    const hasNote = !!itemNotes[itemName];
+    if (!isOwned && !hasNote) return null;
+    return (
+      <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+        {isOwned ? (
+          <Tooltip title={<Trans>Inspect</Trans>}>
+            <IconButton size="small" data-popup-open-details="true">
+              <Search fontSize="small" color="disabled" />
+            </IconButton>
+          </Tooltip>
+        ) : null}
+        {hasNote ? (
+          <Tooltip title={itemNotes[itemName]}>
+            <InfoOutlined fontSize='small' color='disabled' />
+          </Tooltip>
+        ) : null}
+      </Box>
+    );
+  };
 
   return (
     <div
@@ -246,9 +267,7 @@ export function TabPanel(props: TabPanelProps) {
                               <ListItem
                                 disablePadding
                                 style={{ color: isFoundView(itemName) ? grey[400] : grey[700] }}
-                                secondaryAction={itemNotes[itemName] ? <Tooltip title={itemNotes[itemName]}>
-                                  <InfoOutlined fontSize='small' color='disabled' />
-                                </Tooltip> : null}
+                                secondaryAction={renderItemSecondaryAction(itemName)}
                               >
                                 <ListItemButton>
                                   {gameMode !== GameMode.Manual && <>
@@ -353,9 +372,7 @@ export function TabPanel(props: TabPanelProps) {
                           <ListItem
                             disablePadding
                             style={{ color: isFoundView(itemName) ? grey[400] : grey[700] }}
-                            secondaryAction={itemNotes[itemName] ? <Tooltip title={itemNotes[itemName]}>
-                              <InfoOutlined fontSize='small' color='disabled' />
-                            </Tooltip> : null}
+                            secondaryAction={renderItemSecondaryAction(itemName)}
                           >
                             <ListItemButton>
                               {gameMode !== GameMode.Manual && <>

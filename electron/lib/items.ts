@@ -685,7 +685,7 @@ class ItemsStore {
       parseItems(itemList);
     };
 
-    const parseStash = (response: d2s.types.IStash) => {
+    const parseStash = async (response: d2s.types.IStash) => {
       parsedVersion = (response as any)?.version ?? (response as any)?.header?.version;
       const settings = settingsStore.getSettings()
       if (settings.gameMode === GameMode.Softcore && saveName.toLowerCase().includes('hardcore')) {
@@ -694,9 +694,23 @@ class ItemsStore {
       if (settings.gameMode === GameMode.Hardcore && saveName.toLowerCase().includes('softcore')) {
         return [];
       }
-      response.pages.forEach(page => {
-        parseItems(page.items);
-      });
+      const parsedStashVersion = Number.parseInt(String(parsedVersion ?? ''), 10);
+      const stashVersion = Number.isFinite(parsedStashVersion) ? parsedStashVersion : 98;
+      let stashConstants: d2s.types.IConstantData | null = null;
+      try {
+        stashConstants = d2s.getConstantData(stashVersion);
+      } catch {
+        stashConstants = null;
+      }
+
+      for (const page of response.pages || []) {
+        if (stashConstants && page.items?.length) {
+          // Shared stash parsing does not sort displayed properties by default.
+          // Re-enhance with sortProperties so the inspector order matches .d2s items.
+          await d2s.enhanceItems(page.items, stashConstants, 1, { sortProperties: true });
+        }
+        parseItems(page.items || []);
+      }
     }
 
     switch (extension) {
@@ -704,7 +718,7 @@ class ItemsStore {
       case '.d2x':
         await d2stash.read(content).then((response) => {
           response.hardcore === saveName.toLowerCase().includes('hardcore');
-          parseStash(response);
+          return parseStash(response);
         });
         break;
       case '.d2i': {

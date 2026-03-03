@@ -173,7 +173,23 @@ export function List({ fileReaderResponse, appSettings, itemNotes, saveSetting, 
 
   return (
     <Container>
-      <Box sx={{ borderBottom: 4, borderColor: 'divider' }}>
+      <Box
+        sx={{
+          borderBottom: 4,
+          borderColor: 'divider',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 2,
+          flexWrap: 'wrap',
+        }}
+      >
+        <Logo onClick={handleGoHome} style={{ cursor: 'pointer' }}>
+          <Image
+            src={logo}
+            alt=""
+          />
+          <h1>{t('The Holy Grail')}</h1>
+        </Logo>
         <ButtonPanel>
           <Search
             search={search}
@@ -190,14 +206,19 @@ export function List({ fileReaderResponse, appSettings, itemNotes, saveSetting, 
           <Language />
           <SettingsPanel appSettings={appSettings} onSaveSetting={saveSetting} />
         </ButtonPanel>
-        <Logo onClick={handleGoHome} style={{ cursor: 'pointer' }}>
-          <Image
-            src={logo}
-            alt=""
-          />
-          <h1>{t('The Holy Grail')}</h1>
-        </Logo>
-        {tab !== TabState.None && !search.length ?
+      </Box>
+      {tab !== TabState.None && !search.length ?
+        <Box
+          sx={{
+            position: 'sticky',
+            top: 0,
+            zIndex: (theme) => theme.zIndex.appBar,
+            backgroundColor: '#222222',
+            borderTop: 1,
+            borderBottom: 1,
+            borderColor: 'divider',
+          }}
+        >
           <Tabs
             value={tab}
             onChange={(_, value) => { setTab(value); }}
@@ -231,8 +252,9 @@ export function List({ fileReaderResponse, appSettings, itemNotes, saveSetting, 
               ]
             }
           </Tabs>
-          : null}
-      </Box>
+        </Box>
+        : null}
+
       {tab != TabState.Statistics && <MissingOnlySwitch>
         <FormControlLabel
           style={{ opacity: 0.7, paddingTop: 10 }}

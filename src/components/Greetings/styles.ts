@@ -20,7 +20,9 @@ export const Container = styled.div`
   }
 
   h1 {
-    font-size: 60px;
+    margin: 0;
+    font-size: clamp(34px, 5.2vw, 46px);
+    line-height: 1;
     font-family: 'Diablo';
   }
 
@@ -34,7 +36,7 @@ export const Container = styled.div`
 `
 
 export const Image = styled.img`
-  width: 300px;
+  width: clamp(200px, 34vw, 240px);
 `
 
 export const Text = styled.p`

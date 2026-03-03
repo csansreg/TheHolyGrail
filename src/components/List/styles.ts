@@ -16,7 +16,9 @@ export const Container = styled.div`
 
 export const Logo = styled.div`
   display: flex;
-  padding-bottom: 10px;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 6px;
   min-width: 500px;
 
   a {
@@ -28,7 +30,9 @@ export const Logo = styled.div`
   }
 
   h1 {
-    font-size: 60px;
+    margin: 0;
+    font-size: clamp(34px, 4.4vw, 44px);
+    line-height: 1;
     font-family: 'Diablo';
   }
 
@@ -42,11 +46,13 @@ export const Logo = styled.div`
 `
 
 export const Image = styled.img`
-  height: 70px;
+  height: clamp(42px, 5vw, 52px);
 `
 
 export const ButtonPanel = styled.div`
-  float: right;
+  display: flex;
+  align-items: center;
+  margin-left: auto;
 `
 
 export const CountLabelContainer = styled.div`

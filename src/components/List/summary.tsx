@@ -1,5 +1,5 @@
 import { MouseEventHandler, useState } from 'react';
-import { Box, Button, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, IconButton } from '@mui/material';
+import { Box, Button, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, IconButton, Tooltip } from '@mui/material';
 import ShareIcon from '@mui/icons-material/Share';
 import { Container, Image, Logo } from './styles';
 import { TabPanel } from './tab';
@@ -105,9 +105,11 @@ export function Summary({ fileReaderResponse, appSettings, holyGrailStats, itemN
  
   return (
     <>
-      <IconButton onClick={() => setOpen(true)}>
-        <ShareIcon />
-      </IconButton>
+      <Tooltip title={t('Share your progress')} arrow>
+        <IconButton onClick={() => setOpen(true)}>
+          <ShareIcon />
+        </IconButton>
+      </Tooltip>
       {open &&
         <>
           <Dialog onClose={() => setOpen(false)} open>

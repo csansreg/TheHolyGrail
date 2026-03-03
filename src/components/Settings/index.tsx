@@ -17,7 +17,7 @@ import PictureInPictureIcon from '@mui/icons-material/PictureInPicture';
 import { TransitionProps } from '@mui/material/transitions';
 import { useTranslation } from 'react-i18next';
 import { GameMode, GrailType, Settings } from '../../@types/main.d';
-import { Grid, Accordion, AccordionDetails, AccordionSummary, Divider, FormControl, MenuItem, Select, SelectChangeEvent, Checkbox, FormControlLabel, Box, Slider, Alert, TextField, Button, CircularProgress } from '@mui/material';
+import { Grid, Accordion, AccordionDetails, AccordionSummary, Divider, FormControl, MenuItem, Select, SelectChangeEvent, Checkbox, FormControlLabel, Box, Slider, Alert, TextField, Button, CircularProgress, Tooltip } from '@mui/material';
 import FolderIcon from '@mui/icons-material/Folder';
 import GroupIcon from '@mui/icons-material/Group';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -350,9 +350,11 @@ export default function SettingsPanel({ appSettings, onSaveSetting }: SettingsPa
 
   return (
     <>
-      <IconButton onClick={handleClickOpen}>
-        <SettingsIcon />
-      </IconButton>
+      <Tooltip title={t('Settings')} arrow>
+        <IconButton onClick={handleClickOpen}>
+          <SettingsIcon />
+        </IconButton>
+      </Tooltip>
       <Dialog
         fullScreen
         open={open}

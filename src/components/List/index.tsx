@@ -171,6 +171,27 @@ export function List({ fileReaderResponse, appSettings, itemNotes, saveSetting, 
     setTab(TabState.Statistics);
   }
 
+  const handleSearchSubmit = () => {
+    requestAnimationFrame(() => {
+      const visibleResultEntries = Array.from(
+        document.querySelectorAll<HTMLElement>('[data-search-result-entry="true"]')
+      ).filter((entry) => entry.getClientRects().length > 0);
+
+      if (visibleResultEntries.length !== 1) {
+        return;
+      }
+
+      const result = visibleResultEntries[0];
+      const detailsTrigger = result.querySelector<HTMLElement>('[data-popup-open-details="true"]');
+      if (detailsTrigger) {
+        detailsTrigger.click();
+        return;
+      }
+
+      result.click();
+    });
+  };
+
   return (
     <Container>
       <Box
@@ -196,6 +217,7 @@ export function List({ fileReaderResponse, appSettings, itemNotes, saveSetting, 
             onSearch={(text: string) => {
               setSearch(text);
             }}
+            onSubmit={handleSearchSubmit}
           />
           <Summary
             fileReaderResponse={fileReaderResponse}

@@ -96,7 +96,7 @@ export default function RunePopup({
 
   return (
     <>
-      <div onClick={handleClickOpen} style={{ position: 'relative' }}>
+      <div onClick={handleClickOpen} style={{ position: 'relative' }} data-search-result-entry="true">
         {children}
       </div>
       <BootstrapDialog

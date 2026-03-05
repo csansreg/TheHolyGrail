@@ -48,6 +48,8 @@ export type ItemDetails = {
     maxdam?: number,
     twohandmindam?: number,
     twohandmaxdam?: number,
+    throwmindam?: number,
+    throwmaxdam?: number,
   },
   displayedMagicAttributes?: string[],
   displayedRunewordAttributes?: string[],

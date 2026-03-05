@@ -63,10 +63,97 @@ const BLUE_AFFIX_COLOR = '#4e6edf';
 const cleanPropertyLine = (value?: string): string | null => {
   if (!value) return null;
   const cleaned = value
-    .replace(/%\+d/g, '')
+    .replace(/\+\s*-(\d+)/g, '-$1')
     .replace(/\s+/g, ' ')
     .trim();
-  return cleaned.length ? cleaned : null;
+  if (!cleaned.length || cleaned.toLowerCase() === 'undefined') return null;
+  return formatRepairLine(cleaned);
+}
+
+const gcd = (a: number, b: number): number => {
+  let x = Math.abs(a);
+  let y = Math.abs(b);
+  while (y !== 0) {
+    const t = y;
+    y = x % y;
+    x = t;
+  }
+  return x || 1;
+}
+
+const toFraction = (value: number, precision = 1000): [number, number] => {
+  const scaled = Math.round(value * precision);
+  if (scaled === 0) return [0, 1];
+  const divisor = gcd(scaled, precision);
+  return [scaled / divisor, precision / divisor];
+}
+
+const formatRepairLine = (line: string): string => {
+  const match = line.match(/^Repairs\s+(\d+(?:\.\d+)?)\s+durability\s+per\s+second$/i);
+  if (!match) return line;
+  const rate = Number(match[1]);
+  if (!Number.isFinite(rate) || rate <= 0) return line;
+  const [durability, seconds] = toFraction(rate);
+  if (durability <= 0 || seconds <= 0) return line;
+  return `Repairs ${durability} durability in ${seconds} ${seconds === 1 ? 'second' : 'seconds'}`;
+}
+
+const combineMinMaxDamageLines = (lines: string[]): string[] => {
+  const minPattern = /^\+?(-?\d+)\s+to\s+Minimum Damage$/i;
+  const maxPattern = /^\+?(-?\d+)\s+to\s+Maximum Damage$/i;
+  const combined: string[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const current = lines[i];
+    const next = lines[i + 1];
+
+    const minMatch = current.match(minPattern);
+    if (minMatch && next) {
+      const maxMatch = next.match(maxPattern);
+      if (maxMatch) {
+        combined.push(`Adds ${Number(minMatch[1])} - ${Number(maxMatch[1])} Damage`);
+        i += 1;
+        continue;
+      }
+    }
+
+    const maxMatch = current.match(maxPattern);
+    if (maxMatch && next) {
+      const nextMinMatch = next.match(minPattern);
+      if (nextMinMatch) {
+        combined.push(`Adds ${Number(nextMinMatch[1])} - ${Number(maxMatch[1])} Damage`);
+        i += 1;
+        continue;
+      }
+    }
+
+    combined.push(current);
+  }
+
+  return combined;
+}
+
+const hasBaseDefenseModifier = (lines: string[]): boolean => {
+  return lines.some((line) => {
+    const lower = line.toLowerCase();
+    if (lower.includes('enhanced defense')) return true;
+    if (!lower.includes('defense')) return false;
+    if (lower.includes('defense vs.')) return false;
+    if (lower.includes('defense against')) return false;
+    return true;
+  });
+}
+
+const hasBaseDamageModifier = (lines: string[]): boolean => {
+  return lines.some((line) => {
+    const lower = line.toLowerCase();
+    if (lower.includes('enhanced damage')) return true;
+    if (lower.includes('to minimum damage')) return true;
+    if (lower.includes('to maximum damage')) return true;
+    if (/^damage \+\d+$/i.test(line)) return true;
+    if (/^adds\s+\d+\s*-\s*\d+\s*damage$/i.test(line)) return true;
+    return false;
+  });
 }
 
 const getItemPalette = (item: ItemDetails) => {
@@ -213,19 +300,26 @@ export default function Popup({
   const selectedCharacterName = selectedEntry?.characterName;
   const itemNameForDetails = selectedItem ? getDisplayItemName(fullItemName, selectedItem) : fullItemName;
   const colors = selectedItem ? getItemPalette(selectedItem) : { name: '#d7d7d7', base: '#d7d7d7' };
-  const extraLines = selectedItem
-    ? Array.from(new Set(
-      [
-        ...(selectedItem.displayedMagicAttributes || []),
-        ...(selectedItem.displayedRunewordAttributes || []),
-      ].map(cleanPropertyLine).filter(Boolean) as string[]
-    ))
+  const detailLines = selectedItem
+    ? ([
+      ...(selectedItem.displayedMagicAttributes || []),
+      ...(selectedItem.displayedRunewordAttributes || []),
+    ].map(cleanPropertyLine).filter(Boolean) as string[])
     : [];
+  const extraLines = selectedItem
+    ? Array.from(new Set(combineMinMaxDamageLines(detailLines)))
+    : [];
+  const highlightDefense = hasBaseDefenseModifier(detailLines);
+  const highlightDamage = hasBaseDamageModifier([...detailLines, ...extraLines]);
   const isLoadingDropData = open && !drop;
 
   return (
     <>
-      <PopupTrigger onClick={handleClickOpen} loading={isLoadingDropData}>
+      <PopupTrigger
+        onClick={handleClickOpen}
+        loading={isLoadingDropData}
+        data-search-result-entry="true"
+      >
         {children}
         {isLoadingDropData && <div><HourglassEmptyIcon fontSize="small" style={{ position: 'absolute', top: 15, right: 20 }} /></div>}
       </PopupTrigger>
@@ -410,12 +504,37 @@ export default function Popup({
             </Typography>
           ) : (
             <div style={{ textAlign: 'center', lineHeight: 1.25 }}>
-              {typeof selectedItem.defenseRating === 'number' && <div>Defense: {selectedItem.defenseRating}</div>}
+              {typeof selectedItem.defenseRating === 'number' && (
+                <div>
+                  Defense:{' '}
+                  <span style={highlightDefense ? { color: BLUE_AFFIX_COLOR } : undefined}>
+                    {selectedItem.defenseRating}
+                  </span>
+                </div>
+              )}
+              {typeof selectedItem.baseDamage?.throwmindam === 'number' && typeof selectedItem.baseDamage?.throwmaxdam === 'number' && (
+                <div>
+                  Throw Damage:{' '}
+                  <span style={highlightDamage ? { color: BLUE_AFFIX_COLOR } : undefined}>
+                    {selectedItem.baseDamage.throwmindam} to {selectedItem.baseDamage.throwmaxdam}
+                  </span>
+                </div>
+              )}
               {typeof selectedItem.baseDamage?.mindam === 'number' && typeof selectedItem.baseDamage?.maxdam === 'number' && (
-                <div>One-Hand Damage: {selectedItem.baseDamage.mindam} to {selectedItem.baseDamage.maxdam}</div>
+                <div>
+                  One-Hand Damage:{' '}
+                  <span style={highlightDamage ? { color: BLUE_AFFIX_COLOR } : undefined}>
+                    {selectedItem.baseDamage.mindam} to {selectedItem.baseDamage.maxdam}
+                  </span>
+                </div>
               )}
               {typeof selectedItem.baseDamage?.twohandmindam === 'number' && typeof selectedItem.baseDamage?.twohandmaxdam === 'number' && (
-                <div>Two-Hand Damage: {selectedItem.baseDamage.twohandmindam} to {selectedItem.baseDamage.twohandmaxdam}</div>
+                <div>
+                  Two-Hand Damage:{' '}
+                  <span style={highlightDamage ? { color: BLUE_AFFIX_COLOR } : undefined}>
+                    {selectedItem.baseDamage.twohandmindam} to {selectedItem.baseDamage.twohandmaxdam}
+                  </span>
+                </div>
               )}
               {typeof selectedItem.currentDurability === 'number' && typeof selectedItem.maxDurability === 'number' && (
                 <div>Durability: {selectedItem.currentDurability} of {selectedItem.maxDurability}</div>

@@ -7,14 +7,16 @@ import * as Mousetrap from 'mousetrap';
 type SearchBoxProps = {
   search: string,
   onSearch: (text: string) => void,
+  onSubmit?: () => void,
 }
 
-export function Search({ search, onSearch }: SearchBoxProps) {
+export function Search({ search, onSearch, onSubmit }: SearchBoxProps) {
   const { t } = useTranslation();
   const [showSpotlight, setShowSpotlight] = useState(false);
   const showRef = useRef(showSpotlight);
   const searchRef = useRef(search);
   const onSearchRef = useRef(onSearch);
+  const onSubmitRef = useRef(onSubmit);
 
   useEffect(() => {
     showRef.current = showSpotlight;
@@ -27,6 +29,10 @@ export function Search({ search, onSearch }: SearchBoxProps) {
   useEffect(() => {
     onSearchRef.current = onSearch;
   }, [onSearch]);
+
+  useEffect(() => {
+    onSubmitRef.current = onSubmit;
+  }, [onSubmit]);
 
   const openSpotlight = (clearSearch: boolean = false) => {
     setShowSpotlight(true);
@@ -77,6 +83,7 @@ export function Search({ search, onSearch }: SearchBoxProps) {
     if (e.key === 'Enter') {
       e.preventDefault();
       closeSpotlight();
+      onSubmitRef.current?.();
     }
   }
 

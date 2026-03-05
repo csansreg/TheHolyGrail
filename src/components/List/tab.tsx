@@ -14,7 +14,7 @@ import { TabState, title } from '.';
 import Popup from './popup';
 import { Statistics } from '../Stats';
 import { ChangeEvent, MouseEvent } from 'react';
-import { countInSaves, countUnusedInSaves, FlatItemsCache, flattenObject, simplifyItemName } from '../../utils/objects';
+import { buildFlattenObjectCacheKey, countInSaves, countUnusedInSaves, FlatItemsCache, flattenObject, simplifyItemName } from '../../utils/objects';
 import { AvailableRunesLine, CountLabel, CountLabelContainer, Rune, RuneBg, RuneIcon, RuneList, RuneName } from './styles';
 import { runesMapping } from '../../../electron/lib/runesMapping';
 import { runewordsMapping } from '../../../electron/lib/runewordsMapping';
@@ -48,36 +48,49 @@ export const getRuneIcon = (runeType: string): string => {
   return "123456789ABCDEFGHIJKLMNOPQRSTUVWX".charAt(runeNo - 1);
 }
 
-const getCacheKey = (tabIndex: TabState, ethereal: boolean, grailType: GrailType): keyof FlatItemsCache | null => {
+const getCacheKey = (tabIndex: TabState, ethereal: boolean, settings: Settings): keyof FlatItemsCache | null => {
   if (ethereal) {
+    let baseKey: keyof FlatItemsCache | null = null;
     switch (tabIndex) {
       case TabState.UniqueArmor:
-        return 'etharmor';
+        baseKey = 'etharmor';
+        break;
       case TabState.UniqueWeapons:
-        return 'ethweapon';
+        baseKey = 'ethweapon';
+        break;
       case TabState.UniqueOther:
-        return 'ethother';
+        baseKey = 'ethother';
+        break;
       default:
-        return null;
+        baseKey = null;
     }
+    return baseKey ? buildFlattenObjectCacheKey(baseKey, settings) : null;
   }
-  const shouldHideNormalEthItems = grailType === GrailType.Each || grailType === GrailType.Normal;
+
+  let baseKey: keyof FlatItemsCache | null = null;
   switch (tabIndex) {
     case TabState.UniqueArmor:
-      return 'armor';
+      baseKey = 'armor';
+      break;
     case TabState.UniqueWeapons:
-      return `weapon${shouldHideNormalEthItems ? 'E' : ''}`;
+      baseKey = 'weapon';
+      break;
     case TabState.UniqueOther:
-      return `other${shouldHideNormalEthItems ? 'E' : ''}`;
+      baseKey = 'other';
+      break;
     case TabState.Runes:
-      return 'runes';
+      baseKey = 'runes';
+      break;
     case TabState.Runewords:
-      return 'runewords';
+      baseKey = 'runewords';
+      break;
     case TabState.Sets:
-      return 'sets';
+      baseKey = 'sets';
+      break;
     default:
-      return null;
+      baseKey = null;
   }
+  return baseKey ? buildFlattenObjectCacheKey(baseKey, settings) : null;
 }
 
 export function TabPanel(props: TabPanelProps) {
@@ -120,8 +133,8 @@ export function TabPanel(props: TabPanelProps) {
   if (value === index) {
     if (itemList) {
       // Sets are passed via `sets`, not `items`, so index the active data source.
-      flatItems = flattenObject(items || sets || {}, getCacheKey(index, false, grailType));
-      ethFlatItems = flattenObject(ethItems || {}, getCacheKey(index, true, grailType));
+      flatItems = flattenObject(items || sets || {}, getCacheKey(index, false, appSettings));
+      ethFlatItems = flattenObject(ethItems || {}, getCacheKey(index, true, appSettings));
 
       const shouldDisplayItem = (itemName: string): boolean => {
         if (appSettings.grailType === GrailType.Ethereal && !ethFlatItems[itemName]) {
